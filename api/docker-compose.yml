@@ -1,0 +1,30 @@
+services:
+  api:
+    build: .
+    container_name: mekcook-api
+    ports:
+      - '${APP_PORT:-8000}:8000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - mysql
+    env_file:
+      - .env
+    environment:
+      - NODE_OPTIONS=--require=tsconfig-paths/register
+
+  mysql:
+    image: mysql:8.0
+    container_name: mekcook-database
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    ports:
+      - '${DB_PORT:-3306}:3306'
+    volumes:
+      - database:/var/lib/mysql
+
+volumes:
+  database:

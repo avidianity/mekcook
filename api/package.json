@@ -1,0 +1,40 @@
+{
+	"name": "mekcook",
+	"version": "1.0.0",
+	"type": "commonjs",
+	"main": "dist/index.js",
+	"author": "John Michael Manlupig",
+	"license": "MIT",
+	"scripts": {
+		"dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
+		"build": "esbuild src/index.ts --bundle --platform=node --target=node22 --sourcemap --outfile=dist/index.js",
+		"start": "node --enable-source-maps dist/index.js",
+		"db:migrate": "DB_HOST=localhost drizzle-kit push --config drizzle.config.ts"
+	},
+	"dependencies": {
+		"bcrypt": "^6.0.0",
+		"dayjs": "^1.11.13",
+		"dotenv": "^16.5.0",
+		"drizzle-orm": "^0.44.2",
+		"fastify": "^5.3.3",
+		"jsonwebtoken": "^9.0.2",
+		"lodash-es": "^4.17.21",
+		"mysql2": "^3.14.1",
+		"ulid": "^3.0.1",
+		"yup": "^1.6.1"
+	},
+	"devDependencies": {
+		"@types/bcrypt": "^5.0.2",
+		"@types/jsonwebtoken": "^9.0.9",
+		"@types/lodash-es": "^4.17.12",
+		"@types/node": "^22.15.30",
+		"concurrently": "^9.1.2",
+		"drizzle-kit": "^0.31.1",
+		"esbuild": "^0.25.5",
+		"pino-pretty": "^13.0.0",
+		"ts-node-dev": "^2.0.0",
+		"tsconfig-paths": "^4.2.0",
+		"tsx": "^4.19.4",
+		"typescript": "^5.8.3"
+	}
+}

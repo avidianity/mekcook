@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+html {
+  @apply bg-zinc-900 text-white;
+  font-family: 'Inter';
+}
