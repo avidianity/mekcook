@@ -7,6 +7,7 @@ import { ValidationError } from 'yup';
 import * as auth from '@/routes/auth';
 import * as health from '@/routes/health';
 import { formatStack } from '@/utils/error';
+import { makeStatus } from '@/utils/http';
 
 const app = Fastify({
 	logger: config.debug
@@ -44,6 +45,32 @@ register({
 	health,
 });
 
+app.addHook('onSend', async (_, reply, payload) => {
+	const header = reply.getHeader('content-type');
+	const isJson = Array.isArray(header)
+		? header.includes('application/json')
+		: typeof header === 'string' && header.includes('application/json');
+
+	if (isJson && typeof payload === 'string') {
+		try {
+			const data = JSON.parse(payload);
+
+			const modified = {
+				...data,
+				status: makeStatus(reply.statusCode),
+				statusCode: reply.statusCode,
+				timestamp: dayjs().toISOString(),
+			};
+
+			return JSON.stringify(modified);
+		} catch (err) {
+			return payload;
+		}
+	}
+
+	return payload;
+});
+
 app.setNotFoundHandler((request) => {
 	throw new NotFoundException(
 		`The requested URL ${request.url} was not found on this server.`
@@ -63,11 +90,8 @@ app.setErrorHandler((error, request, reply) => {
 
 	if (ValidationError.isError(error)) {
 		return reply.status(400).send({
-			status: 'error',
-			statusCode: 422,
 			error: 'VALIDATION_ERROR',
 			message: error.message,
-			timestamp: dayjs().toISOString(),
 			details: error.errors,
 		});
 	}
@@ -75,17 +99,19 @@ app.setErrorHandler((error, request, reply) => {
 	const response = isException
 		? error.toJSON()
 		: {
-				status: 'error',
-				statusCode: 500,
 				code: 'INTERNAL_SERVER_ERROR',
 				message: error.message,
-				timestamp: dayjs().toISOString(),
 				...(config.debug && error.stack
 					? { stack: formatStack(error.stack) }
 					: {}),
 		  };
 
-	reply.status(response.statusCode || 500).send(response);
+	const statusCode =
+		'statusCode' in response && typeof response.statusCode === 'number'
+			? response.statusCode
+			: 500;
+
+	reply.status(statusCode).send(response);
 });
 
 app.listen({ port: config.port, host: '0.0.0.0' }).catch((err) => {

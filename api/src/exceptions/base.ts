@@ -20,6 +20,10 @@ export class Exception extends Error {
 	}
 
 	get formattedStack() {
+		if (this.statusCode === 401) {
+			return null;
+		}
+
 		return formatStack(this.stack);
 	}
 
@@ -48,7 +52,9 @@ export class Exception extends Error {
 			...object,
 			context: this.context,
 			name: this.name,
-			stack: this.formattedStack,
+			stack: formatStack(this.stack),
+			cause:
+				this.cause instanceof Exception ? this.cause?.toJSON() : this.cause,
 		};
 	}
 }

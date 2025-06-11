@@ -9,7 +9,5 @@ export class UnauthorizedException extends Exception {
 		cause?: Error
 	) {
 		super(message, statusCode, code, context, cause);
-
-		this.stack = undefined;
 	}
 }

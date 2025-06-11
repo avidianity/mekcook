@@ -4,6 +4,7 @@ import { BadRequestException } from '@/exceptions/bad-request';
 import { Exception } from '@/exceptions/base';
 import { verifyUser } from '@/middleware/auth';
 import * as hash from '@/utils/hash';
+import { extractToken, makeSchema } from '@/utils/http';
 import * as jwt from '@/utils/jwt';
 import validators from '@/validators';
 import dayjs from 'dayjs';
@@ -14,27 +15,19 @@ export const register: RouteOptions = {
 	method: 'POST',
 	url: '/register',
 	schema: {
-		response: {
-			200: {
+		response: makeSchema({
+			user: {
 				type: 'object',
 				properties: {
-					user: {
-						type: 'object',
-						properties: {
-							id: { type: 'string', format: 'uuid' },
-							name: { type: 'string', minLength: 1, maxLength: 255 },
-							email: { type: 'string', format: 'email' },
-							createdAt: { type: 'string', format: 'date-time' },
-							updatedAt: { type: 'string', format: 'date-time' },
-						},
-					},
-					status: { type: 'string' },
-					statusCode: { type: 'integer' },
-					timestamp: { type: 'string', format: 'date-time' },
-					token: { type: 'string' },
+					id: { type: 'string', format: 'uuid' },
+					name: { type: 'string', minLength: 1, maxLength: 255 },
+					email: { type: 'string', format: 'email' },
+					created_at: { type: 'string', format: 'date-time' },
+					updated_at: { type: 'string', format: 'date-time' },
 				},
 			},
-		},
+			token: { type: 'string' },
+		}),
 	},
 	handler: async (request, reply) => {
 		const body = await validators.auth.register.validate(request.body);
@@ -82,9 +75,6 @@ export const register: RouteOptions = {
 
 		return reply.status(201).send({
 			user: omit(result.user, ['password']),
-			status: 'created',
-			statusCode: 201,
-			timestamp: dayjs().toISOString(),
 			token: result.token,
 		});
 	},
@@ -105,8 +95,8 @@ export const check: RouteOptions = {
 							id: { type: 'string', format: 'uuid' },
 							name: { type: 'string' },
 							email: { type: 'string', format: 'email' },
-							createdAt: { type: 'string', format: 'date-time' },
-							updatedAt: { type: 'string', format: 'date-time' },
+							created_at: { type: 'string', format: 'date-time' },
+							updated_at: { type: 'string', format: 'date-time' },
 						},
 					},
 				},
@@ -115,7 +105,9 @@ export const check: RouteOptions = {
 	},
 	handler: async (request, reply) => {
 		const user = request.user!;
-		return reply.status(200).send({ user: omit(user, ['password']) });
+		return reply.status(200).send({
+			user: omit(user, ['password']),
+		});
 	},
 };
 
@@ -123,27 +115,19 @@ export const login: RouteOptions = {
 	method: 'POST',
 	url: '/login',
 	schema: {
-		response: {
-			200: {
+		response: makeSchema({
+			user: {
 				type: 'object',
 				properties: {
-					user: {
-						type: 'object',
-						properties: {
-							id: { type: 'string', format: 'uuid' },
-							name: { type: 'string', minLength: 1, maxLength: 255 },
-							email: { type: 'string', format: 'email' },
-							createdAt: { type: 'string', format: 'date-time' },
-							updatedAt: { type: 'string', format: 'date-time' },
-						},
-					},
-					status: { type: 'string' },
-					statusCode: { type: 'integer' },
-					timestamp: { type: 'string', format: 'date-time' },
-					token: { type: 'string' },
+					id: { type: 'string', format: 'uuid' },
+					name: { type: 'string', minLength: 1, maxLength: 255 },
+					email: { type: 'string', format: 'email' },
+					created_at: { type: 'string', format: 'date-time' },
+					updated_at: { type: 'string', format: 'date-time' },
 				},
 			},
-		},
+			token: { type: 'string' },
+		}),
 	},
 	handler: async (request, reply) => {
 		const body = await validators.auth.login.validate(request.body);
@@ -161,7 +145,7 @@ export const login: RouteOptions = {
 			);
 		}
 
-		const isValidPassword = await hash.check(user.password, body.password);
+		const isValidPassword = await hash.check(body.password, user.password);
 
 		if (!isValidPassword) {
 			throw new BadRequestException(
@@ -176,10 +160,27 @@ export const login: RouteOptions = {
 
 		return reply.status(200).send({
 			user: omit(user, ['password']),
-			status: 'ok',
-			statusCode: 200,
-			timestamp: dayjs().toISOString(),
 			token,
 		});
+	},
+};
+
+export const logout: RouteOptions = {
+	method: 'DELETE',
+	url: '/logout',
+	preHandler: verifyUser,
+	schema: {
+		response: {
+			200: {
+				type: 'string',
+			},
+		},
+	},
+	handler: async (request, reply) => {
+		const token = extractToken(request);
+
+		await jwt.invalidate(token);
+
+		reply.status(204).send('');
 	},
 };
