@@ -1,17 +1,37 @@
 import { UnauthorizedException } from '@/exceptions/unauthorized';
 import { FastifyRequest } from 'fastify';
+import { z, ZodRawShape } from 'zod/v4';
 
-export function makeSchema<T extends Record<string, any>>(schema: T) {
+const timestamp = z.union([z.iso.datetime(), z.date()]);
+
+export const schemas = {
+	recipe: z.strictObject({
+		id: z.ulid(),
+		name: z.string().min(1).max(255),
+		ingredients: z.string().nullable(),
+		instructions: z.string().nullable(),
+		createdAt: timestamp,
+		updatedAt: timestamp,
+	}),
+	user: z.strictObject({
+		id: z.ulid(),
+		name: z.string().min(1).max(255),
+		email: z.email(),
+		createdAt: timestamp,
+		updatedAt: timestamp,
+	}),
+	token: z.string(),
+	empty: z.string(),
+};
+
+export function makeSchema<T extends ZodRawShape>(schema: T, statusCode = 200) {
 	return {
-		200: {
-			type: 'object',
-			properties: {
-				...schema,
-				status: { type: 'string' },
-				statusCode: { type: 'integer' },
-				timestamp: { type: 'string', format: 'date-time' },
-			},
-		},
+		[statusCode]: z.strictObject({
+			...schema,
+			status: z.string().optional(),
+			statusCode: z.number().int().optional(),
+			timestamp: z.iso.datetime().optional(),
+		}),
 	};
 }
 

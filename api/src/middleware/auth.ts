@@ -6,8 +6,9 @@ import { isBlacklisted } from '@/utils/jwt';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from 'jsonwebtoken';
 import jwt from 'jsonwebtoken';
+import { omit } from 'lodash-es';
 
-export async function verifyUser(request: FastifyRequest, reply: FastifyReply) {
+export async function verifyUser(request: FastifyRequest) {
 	const token = extractToken(request);
 
 	const { secret, algorithm, issuer } = config.jwt;
@@ -73,11 +74,16 @@ export async function verifyUser(request: FastifyRequest, reply: FastifyReply) {
 	});
 
 	if (!user) {
-		throw new UnauthorizedException('User not found', 401, 'USER_NOT_FOUND', {
-			userId,
-			payload,
-		});
+		throw new UnauthorizedException(
+			'Invalid or expired token',
+			401,
+			'TOKEN_INVALID',
+			{
+				userId,
+				payload,
+			}
+		);
 	}
 
-	request.user = user;
+	request.user = omit(user, ['password']);
 }

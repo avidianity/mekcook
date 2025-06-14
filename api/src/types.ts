@@ -6,6 +6,6 @@ export namespace Exceptions {
 
 declare module 'fastify' {
 	interface FastifyRequest {
-		user?: typeof users.$inferSelect;
+		user?: Omit<typeof users.$inferSelect, 'password'>;
 	}
 }

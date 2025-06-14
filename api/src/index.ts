@@ -1,13 +1,21 @@
-import Fastify, { RouteOptions } from 'fastify';
+import Fastify from 'fastify';
 import { NotFoundException } from '@/exceptions/not-found';
 import { Exception } from '@/exceptions/base';
 import dayjs from 'dayjs';
 import config from '@/config';
-import { ValidationError } from 'yup';
-import * as auth from '@/routes/auth';
-import * as health from '@/routes/health';
 import { formatStack } from '@/utils/error';
 import { makeStatus } from '@/utils/http';
+import z, { ZodError } from 'zod/v4';
+import {
+	hasZodFastifySchemaValidationErrors,
+	isResponseSerializationError,
+	serializerCompiler,
+	validatorCompiler,
+	ZodTypeProvider,
+} from 'fastify-type-provider-zod';
+import auth from '@/routes/auth';
+import health from '@/routes/health';
+import recipes from '@/routes/recipes';
 
 const app = Fastify({
 	logger: config.debug
@@ -24,26 +32,12 @@ const app = Fastify({
 		  }
 		: false,
 	disableRequestLogging: true,
-});
+})
+	.setValidatorCompiler(validatorCompiler)
+	.setSerializerCompiler(serializerCompiler)
+	.withTypeProvider<ZodTypeProvider>();
 
-const register = (routes: Record<string, Record<string, RouteOptions>>) =>
-	Object.entries(routes).forEach(([prefix, routes]) =>
-		app.register(
-			(app) => {
-				for (const route of Object.values(routes)) {
-					app.route(route);
-				}
-			},
-			{
-				prefix,
-			}
-		)
-	);
-
-register({
-	auth,
-	health,
-});
+export type Instance = typeof app;
 
 app.addHook('onSend', async (_, reply, payload) => {
 	const header = reply.getHeader('content-type');
@@ -51,7 +45,7 @@ app.addHook('onSend', async (_, reply, payload) => {
 		? header.includes('application/json')
 		: typeof header === 'string' && header.includes('application/json');
 
-	if (isJson && typeof payload === 'string') {
+	if (isJson && typeof payload === 'string' && reply.statusCode !== 204) {
 		try {
 			const data = JSON.parse(payload);
 
@@ -71,13 +65,27 @@ app.addHook('onSend', async (_, reply, payload) => {
 	return payload;
 });
 
+function register<T extends (app: Instance) => void>(items: Record<string, T>) {
+	for (const [prefix, register] of Object.entries(items)) {
+		app.register((app) => register(app), {
+			prefix,
+		});
+	}
+}
+
+register({
+	auth,
+	health,
+	recipes,
+});
+
 app.setNotFoundHandler((request) => {
 	throw new NotFoundException(
 		`The requested URL ${request.url} was not found on this server.`
 	);
 });
 
-app.setErrorHandler((error, request, reply) => {
+app.setErrorHandler((error: any, request, reply) => {
 	const isException = error instanceof Exception;
 
 	const ignore = config.errors.ignore.some(
@@ -88,11 +96,32 @@ app.setErrorHandler((error, request, reply) => {
 		request.log.error(error);
 	}
 
-	if (ValidationError.isError(error)) {
-		return reply.status(400).send({
-			error: 'VALIDATION_ERROR',
-			message: error.message,
-			details: error.errors,
+	if (error instanceof ZodError) {
+		return reply.status(422).send({
+			code: 'VALIDATION_ERROR',
+			message: 'Invalid input',
+			details: z.treeifyError(error),
+		});
+	} else if (hasZodFastifySchemaValidationErrors(error)) {
+		return reply.code(422).send({
+			code: 'VALIDATION_ERROR',
+			message: 'Invalid input',
+			details: error.validation,
+		});
+	} else if (isResponseSerializationError(error)) {
+		return reply.code(500).send({
+			code: 'INTERNAL_SERVER_ERROR',
+			message: "Response doesn't match the schema",
+			statusCode: 500,
+			...(config.debug
+				? {
+						details: {
+							issues: error.cause.issues,
+							method: error.method,
+							url: error.url,
+						},
+				  }
+				: {}),
 		});
 	}
 
@@ -103,6 +132,11 @@ app.setErrorHandler((error, request, reply) => {
 				message: error.message,
 				...(config.debug && error.stack
 					? { stack: formatStack(error.stack) }
+					: {}),
+				...(config.debug && error.cause
+					? {
+							cause: error.cause,
+					  }
 					: {}),
 		  };
 

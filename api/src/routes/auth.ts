@@ -4,183 +4,143 @@ import { BadRequestException } from '@/exceptions/bad-request';
 import { Exception } from '@/exceptions/base';
 import { verifyUser } from '@/middleware/auth';
 import * as hash from '@/utils/hash';
-import { extractToken, makeSchema } from '@/utils/http';
 import * as jwt from '@/utils/jwt';
-import validators from '@/validators';
-import dayjs from 'dayjs';
-import { RouteOptions } from 'fastify';
-import { omit } from 'lodash-es';
+import { extractToken, makeSchema, schemas } from '@/utils/http';
+import type { Instance } from '@/index';
+import { z } from 'zod/v4';
 
-export const register: RouteOptions = {
-	method: 'POST',
-	url: '/register',
-	schema: {
-		response: makeSchema({
-			user: {
-				type: 'object',
-				properties: {
-					id: { type: 'string', format: 'uuid' },
-					name: { type: 'string', minLength: 1, maxLength: 255 },
-					email: { type: 'string', format: 'email' },
-					created_at: { type: 'string', format: 'date-time' },
-					updated_at: { type: 'string', format: 'date-time' },
-				},
-			},
-			token: { type: 'string' },
-		}),
-	},
-	handler: async (request, reply) => {
-		const body = await validators.auth.register.validate(request.body);
+export default (app: Instance) => {
+	app.post('/register', {
+		schema: {
+			body: z.strictObject({
+				name: z.string().min(1).max(255),
+				email: z.email(),
+				password: z.string().min(4).max(255),
+			}),
+			response: makeSchema({
+				user: schemas.user,
+				token: schemas.token,
+			}),
+		},
+		async handler({ body }, reply) {
+			const result = await db.transaction(async (tx) => {
+				const userExists = await tx.query.users.findFirst({
+					where: (users, { eq }) => eq(users.email, body.email),
+				});
 
-		const result = await db.transaction(async (tx) => {
-			const userExists = await tx.query.users.findFirst({
+				if (userExists) {
+					throw new BadRequestException('User already exists with this email.');
+				}
+
+				const password = await hash.make(body.password);
+
+				const [{ id }] = await tx
+					.insert(users)
+					.values({
+						name: body.name,
+						email: body.email,
+						password,
+					})
+					.$returningId();
+
+				const user = await tx.query.users.findFirst({
+					where: (users, { eq }) => eq(users.id, id),
+				});
+
+				if (!user) {
+					throw new Exception(
+						'User not found after registration.',
+						500,
+						'USER_NOT_FOUND',
+						{
+							id,
+							email: body.email,
+						}
+					);
+				}
+
+				const token = jwt.sign(user);
+
+				return { user, token };
+			});
+
+			return reply.status(201).send(result);
+		},
+	});
+
+	app.get('/check', {
+		preHandler: verifyUser,
+		schema: {
+			response: makeSchema({
+				user: schemas.user,
+			}),
+		},
+		async handler(request, reply) {
+			const user = request.user!;
+			return reply.status(200).send({
+				user,
+			});
+		},
+	});
+
+	app.post('/login', {
+		schema: {
+			body: z.strictObject({
+				email: z.email(),
+				password: z.string().min(4).max(255),
+			}),
+			response: makeSchema({
+				user: schemas.user,
+				token: schemas.token,
+			}),
+		},
+		async handler({ body }, reply) {
+			const user = await db.query.users.findFirst({
 				where: (users, { eq }) => eq(users.email, body.email),
 			});
 
-			if (userExists) {
-				throw new BadRequestException('User already exists with this email.');
+			if (!user) {
+				throw new BadRequestException(
+					'Invalid email.',
+					400,
+					'INVALID_EMAIL',
+					body
+				);
 			}
 
-			const password = await hash.make(body.password);
+			const isValidPassword = await hash.check(body.password, user.password);
 
-			const [{ id }] = await tx
-				.insert(users)
-				.values({
-					name: body.name,
-					email: body.email,
-					password,
-				})
-				.$returningId();
-
-			const user = await tx.query.users.findFirst({
-				where: (users, { eq }) => eq(users.id, id),
-			});
-
-			if (!user) {
-				throw new Exception(
-					'User not found after registration.',
-					500,
-					'USER_NOT_FOUND',
-					{
-						id,
-						email: body.email,
-					}
+			if (!isValidPassword) {
+				throw new BadRequestException(
+					'Password is incorrect.',
+					400,
+					'INVALID_PASSWORD',
+					body
 				);
 			}
 
 			const token = jwt.sign(user);
 
-			return { user, token };
-		});
+			return reply.status(200).send({
+				user,
+				token,
+			});
+		},
+	});
 
-		return reply.status(201).send({
-			user: omit(result.user, ['password']),
-			token: result.token,
-		});
-	},
-};
-
-export const check: RouteOptions = {
-	method: 'GET',
-	url: '/check',
-	preHandler: verifyUser,
-	schema: {
-		response: {
-			200: {
-				type: 'object',
-				properties: {
-					user: {
-						type: 'object',
-						properties: {
-							id: { type: 'string', format: 'uuid' },
-							name: { type: 'string' },
-							email: { type: 'string', format: 'email' },
-							created_at: { type: 'string', format: 'date-time' },
-							updated_at: { type: 'string', format: 'date-time' },
-						},
-					},
-				},
+	app.delete('/logout', {
+		preHandler: verifyUser,
+		schema: {
+			response: {
+				204: schemas.empty,
 			},
 		},
-	},
-	handler: async (request, reply) => {
-		const user = request.user!;
-		return reply.status(200).send({
-			user: omit(user, ['password']),
-		});
-	},
-};
+		async handler(request, reply) {
+			const token = extractToken(request);
 
-export const login: RouteOptions = {
-	method: 'POST',
-	url: '/login',
-	schema: {
-		response: makeSchema({
-			user: {
-				type: 'object',
-				properties: {
-					id: { type: 'string', format: 'uuid' },
-					name: { type: 'string', minLength: 1, maxLength: 255 },
-					email: { type: 'string', format: 'email' },
-					created_at: { type: 'string', format: 'date-time' },
-					updated_at: { type: 'string', format: 'date-time' },
-				},
-			},
-			token: { type: 'string' },
-		}),
-	},
-	handler: async (request, reply) => {
-		const body = await validators.auth.login.validate(request.body);
+			await jwt.invalidate(token);
 
-		const user = await db.query.users.findFirst({
-			where: (users, { eq }) => eq(users.email, body.email),
-		});
-
-		if (!user) {
-			throw new BadRequestException(
-				'Invalid email.',
-				400,
-				'INVALID_EMAIL',
-				body
-			);
-		}
-
-		const isValidPassword = await hash.check(body.password, user.password);
-
-		if (!isValidPassword) {
-			throw new BadRequestException(
-				'Password is incorrect.',
-				400,
-				'INVALID_PASSWORD',
-				body
-			);
-		}
-
-		const token = jwt.sign(user);
-
-		return reply.status(200).send({
-			user: omit(user, ['password']),
-			token,
-		});
-	},
-};
-
-export const logout: RouteOptions = {
-	method: 'DELETE',
-	url: '/logout',
-	preHandler: verifyUser,
-	schema: {
-		response: {
-			200: {
-				type: 'string',
-			},
+			reply.status(204).send('');
 		},
-	},
-	handler: async (request, reply) => {
-		const token = extractToken(request);
-
-		await jwt.invalidate(token);
-
-		reply.status(204).send('');
-	},
+	});
 };

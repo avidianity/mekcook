@@ -1,13 +1,13 @@
 import { makeSchema } from '@/utils/http';
-import { RouteOptions } from 'fastify';
+import { Instance } from '@/index';
 
-export const check: RouteOptions = {
-	method: 'GET',
-	url: '/check',
-	schema: {
-		response: makeSchema({}),
-	},
-	handler: async (_, reply) => {
-		return reply.status(200).send({});
-	},
+export default (app: Instance) => {
+	app.get('/check', {
+		schema: {
+			response: makeSchema({}),
+		},
+		async handler(_, reply) {
+			return reply.status(200).send({});
+		},
+	});
 };
