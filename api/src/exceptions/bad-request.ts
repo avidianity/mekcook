@@ -6,9 +6,10 @@ export class BadRequestException extends Exception {
 		message = 'Bad Request',
 		statusCode = 400,
 		code = 'BAD_REQUEST',
-		context?: Exceptions.Context
+		context?: Exceptions.Context,
+		cause?: Error
 	) {
-		super(message, statusCode, code, context);
+		super(message, statusCode, code, context, cause);
 
 		this.stack = undefined;
 	}

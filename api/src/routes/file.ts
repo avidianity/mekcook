@@ -6,9 +6,10 @@ import { fileExists } from '@/utils/file';
 import { NotFoundException } from '@/exceptions/not-found';
 import { BadRequestException } from '@/exceptions/bad-request';
 import z from 'zod/v4';
-import { fileTypeFromStream } from 'file-type';
+import { fileTypeFromStream, fileTypeFromBuffer } from 'file-type';
 import config from '@/config';
 import { makeSchema } from '@/utils/http';
+import { ReadableStream } from 'stream/web';
 
 const STORAGE_PATH = config.storage.path;
 
@@ -29,7 +30,16 @@ export default (app: Instance) => {
 			),
 		},
 		async handler(request, reply) {
-			const data = await request.file();
+			const data = await request.file().catch((error) => {
+				throw new BadRequestException(
+					'No file uploaded',
+					400,
+					'NO_FILE_UPLOADED',
+					undefined,
+					error
+				);
+			});
+
 			if (!data) {
 				throw new BadRequestException(
 					'No file uploaded',
@@ -76,17 +86,15 @@ export default (app: Instance) => {
 				});
 			}
 
-			// Open and get a stream
-			const fh = await fs.open(filePath, 'r');
-			const stream = fh.createReadStream();
+			const buffer = await fs.readFile(filePath);
 
 			// Detect MIME type from the stream
-			const type = await fileTypeFromStream(stream);
+			const type = await fileTypeFromBuffer(buffer);
 
 			return reply
 				.header('Content-Disposition', `attachment; filename="${id}"`)
 				.header('Content-Type', type?.mime || 'application/octet-stream')
-				.send(stream);
+				.send(buffer);
 		},
 	});
 };
