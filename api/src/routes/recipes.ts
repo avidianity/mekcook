@@ -68,6 +68,7 @@ export default (app: Instance) => {
 					name: z.string().min(1).max(255),
 					ingredients: z.string(),
 					instructions: z.string(),
+					imageId: z.ulid(),
 				})
 				.strip(),
 			response: makeSchema(
@@ -87,6 +88,7 @@ export default (app: Instance) => {
 						name: request.body.name,
 						ingredients: request.body.ingredients,
 						instructions: request.body.instructions,
+						imageId: request.body.imageId,
 						userId: user.id,
 					})
 					.$returningId();
@@ -127,6 +129,7 @@ export default (app: Instance) => {
 					name: z.string().min(1).max(255).optional(),
 					ingredients: z.string().optional(),
 					instructions: z.string().optional(),
+					imageId: z.ulid().optional(),
 				})
 				.strip(),
 			response: makeSchema({
@@ -156,6 +159,7 @@ export default (app: Instance) => {
 						name: request.body.name,
 						ingredients: request.body.ingredients,
 						instructions: request.body.instructions,
+						imageId: request.body.imageId,
 					})
 					.where(and(eq(recipes.id, id), eq(recipes.userId, user.id)));
 

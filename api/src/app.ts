@@ -15,12 +15,14 @@ import {
 	ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import auth from '@/routes/auth';
+import file from '@/routes/file';
 import health from '@/routes/health';
 import recipes from '@/routes/recipes';
 import schedules from '@/routes/schedules';
 import fastifySwagger from '@fastify/swagger';
 import pkg from '../package.json';
 import fastifySwaggerUi from '@fastify/swagger-ui';
+import fastifyMultipart from '@fastify/multipart';
 import { startCase } from 'lodash-es';
 
 const app = Fastify({
@@ -48,7 +50,10 @@ const routes = {
 	health,
 	recipes,
 	schedules,
+	file,
 };
+
+app.register(fastifyMultipart);
 
 app.register(fastifySwagger, {
 	openapi: {

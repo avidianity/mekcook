@@ -22,6 +22,9 @@ export default {
 			maxSize: parseInt(env('JWT_MAX_BLACKLIST_SIZE', '10000')!),
 		},
 	},
+	storage: {
+		path: path.resolve(__dirname, '../storage/uploads'),
+	},
 	errors: {
 		ignore: [NotFoundException],
 	},

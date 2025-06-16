@@ -7,6 +7,7 @@ import { users, recipes } from '@/db/schema';
 import * as hash from '@/utils/hash';
 import * as jwt from '@/utils/jwt';
 import type TestAgent from 'supertest/lib/agent';
+import { ulid } from 'ulid';
 
 describe('Recipes Routes', () => {
 	let request: TestAgent;
@@ -48,6 +49,7 @@ describe('Recipes Routes', () => {
 			name: faker.lorem.words(2),
 			ingredients: faker.lorem.sentence(),
 			instructions: faker.lorem.sentences(2),
+			imageId: ulid().toLowerCase(),
 		};
 
 		const res = await request
@@ -75,6 +77,7 @@ describe('Recipes Routes', () => {
 				name: faker.lorem.words(2),
 				ingredients: faker.lorem.sentence(),
 				instructions: faker.lorem.sentences(2),
+				imageId: ulid().toLowerCase(),
 				userId,
 			})
 			.$returningId()
@@ -92,6 +95,7 @@ describe('Recipes Routes', () => {
 				name: faker.lorem.words(2),
 				ingredients: faker.lorem.sentence(),
 				instructions: faker.lorem.sentences(2),
+				imageId: ulid().toLowerCase(),
 				userId,
 			})
 			.$returningId()
@@ -119,6 +123,7 @@ describe('Recipes Routes', () => {
 				name: faker.lorem.words(2),
 				ingredients: faker.lorem.sentence(),
 				instructions: faker.lorem.sentences(2),
+				imageId: ulid().toLowerCase(),
 				userId,
 			})
 			.$returningId()

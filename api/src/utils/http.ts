@@ -11,6 +11,7 @@ const recipeSchema = z
 		name: z.string().min(1).max(255),
 		ingredients: z.string().nullable(),
 		instructions: z.string().nullable(),
+		imageId: z.ulid(),
 		createdAt: timestamp,
 		updatedAt: timestamp,
 	})

@@ -24,6 +24,7 @@ jobs:
       TZ: UTC
       HASH_ROUNDS: 4
       NODE_ENV: test
+      DOTENV_CONFIG_PATH: .env.test
 
     services:
       mysql:
@@ -64,6 +65,8 @@ jobs:
             echo "Waiting for MySQL..."
             sleep 2
           done
+      - name: Run migrations
+        run: npx drizzle-kit push --config drizzle.config.ts
 
       - name: Create testing database and grant privileges
         env:

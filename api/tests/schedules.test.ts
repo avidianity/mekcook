@@ -7,6 +7,7 @@ import { users, recipes, schedules } from '@/db/schema';
 import * as hash from '@/utils/hash';
 import * as jwt from '@/utils/jwt';
 import type TestAgent from 'supertest/lib/agent';
+import { ulid } from 'ulid';
 
 describe('Schedules Routes', () => {
 	let request: TestAgent;
@@ -45,6 +46,7 @@ describe('Schedules Routes', () => {
 				name: faker.lorem.words(2),
 				ingredients: faker.lorem.sentence(),
 				instructions: faker.lorem.sentences(2),
+				imageId: ulid().toLowerCase(),
 				userId,
 			})
 			.$returningId();

@@ -37,6 +37,7 @@ export const recipes = mysqlTable('recipes', {
 	userId: varchar('userId', { length: 26 })
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
+	imageId: varchar('imageId', { length: 26 }).notNull(),
 	...timestamps,
 });
 
