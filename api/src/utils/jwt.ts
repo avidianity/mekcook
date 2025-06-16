@@ -9,6 +9,7 @@ import path from 'path';
 import dayjs from 'dayjs';
 import { Mutex } from 'async-mutex';
 import { sha256 } from '@/utils/hash';
+import { fileExists } from '@/utils/file';
 
 export function sign<T extends typeof users.$inferSelect>(payload: T) {
 	const { secret, algorithm, issuer, expiresIn } = config.jwt;
@@ -106,6 +107,10 @@ type BlacklistMap = Record<string, { expiry: string }>;
 
 async function readBlacklist(): Promise<BlacklistMap> {
 	try {
+		if (!(await fileExists(BLACKLIST_PATH))) {
+			return {};
+		}
+
 		const data = await fs.readFile(BLACKLIST_PATH, 'utf-8');
 		const obj = JSON.parse(data);
 		// Remove expired entries

@@ -6,17 +6,19 @@ import { verifyUser } from '@/middleware/auth';
 import * as hash from '@/utils/hash';
 import * as jwt from '@/utils/jwt';
 import { extractToken, makeSchema, schemas } from '@/utils/http';
-import type { Instance } from '@/index';
+import type { Instance } from '@/app';
 import { z } from 'zod/v4';
 
 export default (app: Instance) => {
 	app.post('/register', {
 		schema: {
-			body: z.strictObject({
-				name: z.string().min(1).max(255),
-				email: z.email(),
-				password: z.string().min(4).max(255),
-			}),
+			body: z
+				.strictObject({
+					name: z.string().min(1).max(255),
+					email: z.email(),
+					password: z.string().min(4).max(255),
+				})
+				.strip(),
 			response: makeSchema({
 				user: schemas.user,
 				token: schemas.token,
@@ -85,10 +87,12 @@ export default (app: Instance) => {
 
 	app.post('/login', {
 		schema: {
-			body: z.strictObject({
-				email: z.email(),
-				password: z.string().min(4).max(255),
-			}),
+			body: z
+				.strictObject({
+					email: z.email(),
+					password: z.string().min(4).max(255),
+				})
+				.strip(),
 			response: makeSchema({
 				user: schemas.user,
 				token: schemas.token,

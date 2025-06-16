@@ -6,9 +6,12 @@ import { env } from '@/utils/env';
 import path from 'path';
 
 export default {
+	name: env('APP_NAME', 'MekCook'),
 	env: env('APP_ENV', 'local') as 'local' | 'production' | 'test',
 	debug: env('APP_DEBUG', 'false') === 'true',
-	port: parseInt(env('APP_PORT', '8000') as string),
+	port: env('APP_PORT')
+		? parseInt(env('APP_PORT', '8000') as string)
+		: undefined,
 	jwt: {
 		secret: env('JWT_SECRET'),
 		expiresIn: env('JWT_EXPIRES_IN', '30d') as StringValue,

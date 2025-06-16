@@ -9,7 +9,8 @@ export class Exception extends Error {
 		public statusCode = 500,
 		public code = 'INTERNAL_SERVER_ERROR',
 		public context?: Exceptions.Context,
-		public cause?: Error
+		public cause?: Error,
+		public ignore = false
 	) {
 		super(message);
 		this.name = this.constructor.name;

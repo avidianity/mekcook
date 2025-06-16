@@ -2,7 +2,7 @@ import { db } from '@/db';
 import { verifyUser } from '@/middleware/auth';
 import { makeSchema, schemas } from '@/utils/http';
 import { z } from 'zod/v4';
-import { Instance } from '@/index';
+import { Instance } from '@/app';
 import { ModelNotFoundException } from '@/exceptions/model-not-found';
 import { recipes } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -31,9 +31,11 @@ export default (app: Instance) => {
 	app.get('/:id', {
 		preHandler: verifyUser,
 		schema: {
-			params: z.strictObject({
-				id: z.ulid(),
-			}),
+			params: z
+				.strictObject({
+					id: z.ulid(),
+				})
+				.strip(),
 			response: makeSchema({
 				data: schemas.recipe,
 			}),
@@ -61,11 +63,13 @@ export default (app: Instance) => {
 	app.post('/', {
 		preHandler: verifyUser,
 		schema: {
-			body: z.strictObject({
-				name: z.string().min(1).max(255),
-				ingredients: z.string(),
-				instructions: z.string(),
-			}),
+			body: z
+				.strictObject({
+					name: z.string().min(1).max(255),
+					ingredients: z.string(),
+					instructions: z.string(),
+				})
+				.strip(),
 			response: makeSchema(
 				{
 					data: schemas.recipe,
@@ -113,14 +117,18 @@ export default (app: Instance) => {
 		method: ['PUT', 'PATCH'],
 		preHandler: verifyUser,
 		schema: {
-			params: z.strictObject({
-				id: z.ulid(),
-			}),
-			body: z.strictObject({
-				name: z.string().min(1).max(255).optional(),
-				ingredients: z.string().optional(),
-				instructions: z.string().optional(),
-			}),
+			params: z
+				.strictObject({
+					id: z.ulid(),
+				})
+				.strip(),
+			body: z
+				.strictObject({
+					name: z.string().min(1).max(255).optional(),
+					ingredients: z.string().optional(),
+					instructions: z.string().optional(),
+				})
+				.strip(),
 			response: makeSchema({
 				data: schemas.recipe,
 			}),
@@ -176,9 +184,11 @@ export default (app: Instance) => {
 	app.delete('/:id', {
 		preHandler: verifyUser,
 		schema: {
-			params: z.strictObject({
-				id: z.ulid(),
-			}),
+			params: z
+				.strictObject({
+					id: z.ulid(),
+				})
+				.strip(),
 			response: {
 				204: schemas.empty,
 			},

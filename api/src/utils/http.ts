@@ -1,37 +1,57 @@
 import { UnauthorizedException } from '@/exceptions/unauthorized';
 import { FastifyRequest } from 'fastify';
 import { z, ZodRawShape } from 'zod/v4';
+import { normalizeTime } from '@/utils/date';
 
 const timestamp = z.union([z.iso.datetime(), z.date()]);
 
-export const schemas = {
-	recipe: z.strictObject({
+const recipeSchema = z
+	.strictObject({
 		id: z.ulid(),
 		name: z.string().min(1).max(255),
 		ingredients: z.string().nullable(),
 		instructions: z.string().nullable(),
 		createdAt: timestamp,
 		updatedAt: timestamp,
-	}),
-	user: z.strictObject({
-		id: z.ulid(),
-		name: z.string().min(1).max(255),
-		email: z.email(),
-		createdAt: timestamp,
-		updatedAt: timestamp,
-	}),
+	})
+	.strip();
+
+export const schemas = {
+	recipe: recipeSchema,
+	schedule: z
+		.strictObject({
+			id: z.ulid(),
+			type: z.string().min(1).max(255),
+			day: z.string().min(1).max(255),
+			time: z.iso.time().transform(normalizeTime),
+			createdAt: timestamp,
+			updatedAt: timestamp,
+			recipe: recipeSchema,
+		})
+		.strip(),
+	user: z
+		.strictObject({
+			id: z.ulid(),
+			name: z.string().min(1).max(255),
+			email: z.email(),
+			createdAt: timestamp,
+			updatedAt: timestamp,
+		})
+		.strip(),
 	token: z.string(),
 	empty: z.string(),
 };
 
 export function makeSchema<T extends ZodRawShape>(schema: T, statusCode = 200) {
 	return {
-		[statusCode]: z.strictObject({
-			...schema,
-			status: z.string().optional(),
-			statusCode: z.number().int().optional(),
-			timestamp: z.iso.datetime().optional(),
-		}),
+		[statusCode]: z
+			.strictObject({
+				...schema,
+				status: z.string().optional(),
+				statusCode: z.number().int().min(100).max(599).optional(),
+				timestamp: z.iso.datetime().optional(),
+			})
+			.strip(),
 	};
 }
 

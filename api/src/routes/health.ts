@@ -1,5 +1,5 @@
 import { makeSchema } from '@/utils/http';
-import { Instance } from '@/index';
+import { Instance } from '@/app';
 
 export default (app: Instance) => {
 	app.get('/check', {
