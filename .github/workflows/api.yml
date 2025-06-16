@@ -1,4 +1,4 @@
-name: CI
+name: API
 
 on:
   push:
@@ -8,6 +8,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
 
     env:
       DB_HOST: 127.0.0.1
@@ -27,7 +30,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: ${{ env.DB_PASSWORD }}
-          MYSQL_ROOT_HOST: '%'
+          MYSQL_ROOT_HOST: "%"
           MYSQL_DATABASE: ${{ env.DB_DATABASE }}
           MYSQL_USER: ${{ env.DB_USERNAME }}
           MYSQL_PASSWORD: ${{ env.DB_PASSWORD }}
