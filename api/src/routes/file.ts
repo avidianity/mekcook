@@ -6,10 +6,9 @@ import { fileExists } from '@/utils/file';
 import { NotFoundException } from '@/exceptions/not-found';
 import { BadRequestException } from '@/exceptions/bad-request';
 import z from 'zod/v4';
-import { fileTypeFromStream, fileTypeFromBuffer } from 'file-type';
+import { fileTypeFromBuffer } from 'file-type';
 import config from '@/config';
 import { makeSchema } from '@/utils/http';
-import { ReadableStream } from 'stream/web';
 
 const STORAGE_PATH = config.storage.path;
 
@@ -54,10 +53,13 @@ export default (app: Instance) => {
 
 			const ws = await fs.open(filePath, 'w');
 			const writeStream = ws.createWriteStream();
-			await new Promise<void>((resolve, reject) => {
-				data.file.pipe(writeStream).on('finish', resolve).on('error', reject);
-			});
-			await ws.close();
+			try {
+				await new Promise<void>((resolve, reject) => {
+					data.file.pipe(writeStream).on('finish', resolve).on('error', reject);
+				});
+			} finally {
+				await ws.close();
+			}
 
 			return reply.status(201).send({
 				data: {
