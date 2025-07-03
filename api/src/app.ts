@@ -24,6 +24,7 @@ import pkg from '../package.json';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import fastifyMultipart from '@fastify/multipart';
 import { startCase } from 'lodash-es';
+import cors from '@fastify/cors';
 
 const app = Fastify({
 	logger: config.debug
@@ -54,6 +55,11 @@ const routes = {
 };
 
 app.register(fastifyMultipart);
+
+app.register(cors, {
+	origin: '*',
+	credentials: true,
+});
 
 app.register(fastifySwagger, {
 	openapi: {

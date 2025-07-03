@@ -10,8 +10,11 @@ import dayjs from 'dayjs';
 import { Mutex } from 'async-mutex';
 import { sha256 } from '@/utils/hash';
 import { fileExists } from '@/utils/file';
+import { omit } from 'lodash-es';
 
-export function sign<T extends typeof users.$inferSelect>(payload: T) {
+export function sign<T extends typeof users.$inferSelect>(
+	payload: Omit<T, 'password'>
+) {
 	const { secret, algorithm, issuer, expiresIn } = config.jwt;
 	if (typeof secret !== 'string' || secret.trim() === '') {
 		throw new Exception(
@@ -29,7 +32,7 @@ export function sign<T extends typeof users.$inferSelect>(payload: T) {
 		expiresIn,
 	};
 
-	return jwt.sign({ user: payload }, secret, signOptions);
+	return jwt.sign({ user: omit(payload, ['password']) }, secret, signOptions);
 }
 
 export async function verify(token: string) {

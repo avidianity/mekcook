@@ -8,6 +8,7 @@ import * as jwt from '@/utils/jwt';
 import { extractToken, makeSchema, schemas } from '@/utils/http';
 import type { Instance } from '@/app';
 import { z } from 'zod/v4';
+import { omit } from 'lodash-es';
 
 export default (app: Instance) => {
 	app.post('/register', {
@@ -45,9 +46,12 @@ export default (app: Instance) => {
 					})
 					.$returningId();
 
-				const user = await tx.query.users.findFirst({
-					where: (users, { eq }) => eq(users.id, id),
-				});
+				const user = omit(
+					await tx.query.users.findFirst({
+						where: (users, { eq }) => eq(users.id, id),
+					}),
+					['password']
+				);
 
 				if (!user) {
 					throw new Exception(
@@ -99,11 +103,11 @@ export default (app: Instance) => {
 			}),
 		},
 		async handler({ body }, reply) {
-			const user = await db.query.users.findFirst({
+			const data = await db.query.users.findFirst({
 				where: (users, { eq }) => eq(users.email, body.email),
 			});
 
-			if (!user) {
+			if (!data) {
 				throw new BadRequestException(
 					'Invalid email.',
 					400,
@@ -112,7 +116,7 @@ export default (app: Instance) => {
 				);
 			}
 
-			const isValidPassword = await hash.check(body.password, user.password);
+			const isValidPassword = await hash.check(body.password, data.password);
 
 			if (!isValidPassword) {
 				throw new BadRequestException(
@@ -122,6 +126,8 @@ export default (app: Instance) => {
 					body
 				);
 			}
+
+			const user = omit(data, ['password']);
 
 			const token = jwt.sign(user);
 

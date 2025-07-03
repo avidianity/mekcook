@@ -2,6 +2,7 @@ import { UnauthorizedException } from '@/exceptions/unauthorized';
 import { FastifyRequest } from 'fastify';
 import { z, ZodRawShape } from 'zod/v4';
 import { normalizeTime } from '@/utils/date';
+import { get } from 'lodash-es';
 
 const timestamp = z.union([z.iso.datetime(), z.date()]);
 
@@ -70,6 +71,11 @@ export function makeStatus(code: number) {
 
 export function extractToken(request: FastifyRequest) {
 	const authHeader = request.headers.authorization;
+	const paramToken = get(request.params, 'token');
+
+	if (paramToken) {
+		return paramToken as string;
+	}
 
 	if (!authHeader) {
 		throw new UnauthorizedException();
