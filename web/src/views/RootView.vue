@@ -15,5 +15,5 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>Root: {{ user === null ? 'null' : 'idk' }}</div>
+  <div></div>
 </template>
